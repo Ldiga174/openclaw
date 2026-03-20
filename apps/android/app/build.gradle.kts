@@ -223,6 +223,9 @@ dependencies {
     implementation("androidx.camera:camera-video:1.5.2")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
+    // LiteRT-LM: on-device generative AI inference (GPU-accelerated)
+    implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+
     // Unicast DNS-SD (Wide-Area Bonjour) for tailnet discovery domains.
     implementation("dnsjava:dnsjava:3.6.4")
 

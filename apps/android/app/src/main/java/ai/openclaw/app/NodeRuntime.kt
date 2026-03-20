@@ -11,6 +11,10 @@ import ai.openclaw.app.chat.ChatMessage
 import ai.openclaw.app.chat.ChatPendingToolCall
 import ai.openclaw.app.chat.ChatSessionEntry
 import ai.openclaw.app.chat.OutgoingAttachment
+import ai.openclaw.app.litert.LiteRTEngineWrapper
+import ai.openclaw.app.litert.LiteRTModelManager
+import ai.openclaw.app.litert.LocalChatController
+import ai.openclaw.app.litert.OnDeviceModelCatalog
 import ai.openclaw.app.gateway.DeviceAuthStore
 import ai.openclaw.app.gateway.DeviceIdentityStore
 import ai.openclaw.app.gateway.GatewayDiscovery
@@ -55,6 +59,9 @@ class NodeRuntime(
   val location = LocationCaptureManager(appContext)
   val sms = SmsManager(appContext)
   private val json = Json { ignoreUnknownKeys = true }
+
+  val liteRTModelManager = LiteRTModelManager(appContext)
+  val liteRTEngine = LiteRTEngineWrapper(appContext)
 
   private val externalAudioCaptureActive = MutableStateFlow(false)
 
@@ -321,6 +328,70 @@ class NodeRuntime(
       json = json,
       supportsChatSubscribe = false,
     )
+
+  val localChat: LocalChatController =
+    LocalChatController(scope = scope, engine = liteRTEngine)
+
+  private val _onDeviceModelLoading = MutableStateFlow(false)
+  val onDeviceModelLoading: StateFlow<Boolean> = _onDeviceModelLoading.asStateFlow()
+
+  private val _onDeviceModelReady = MutableStateFlow(false)
+  val onDeviceModelReady: StateFlow<Boolean> = _onDeviceModelReady.asStateFlow()
+
+  val onDeviceEnabled: StateFlow<Boolean> = prefs.onDeviceModelEnabled
+  val selectedOnDeviceModelId: StateFlow<String> = prefs.selectedOnDeviceModelId
+
+  fun setOnDeviceModelEnabled(enabled: Boolean) {
+    prefs.setOnDeviceModelEnabled(enabled)
+    if (enabled) {
+      loadSelectedOnDeviceModel()
+    } else {
+      scope.launch { liteRTEngine.release() }
+      _onDeviceModelReady.value = false
+    }
+  }
+
+  fun setSelectedOnDeviceModelId(modelId: String) {
+    prefs.setSelectedOnDeviceModelId(modelId)
+    if (prefs.onDeviceModelEnabled.value) {
+      loadSelectedOnDeviceModel()
+    }
+  }
+
+  fun loadSelectedOnDeviceModel() {
+    val modelId = prefs.selectedOnDeviceModelId.value.trim()
+    if (modelId.isEmpty()) return
+    val model = OnDeviceModelCatalog.findById(modelId) ?: return
+    if (!liteRTModelManager.isDownloaded(modelId)) return
+
+    _onDeviceModelLoading.value = true
+    _onDeviceModelReady.value = false
+    scope.launch {
+      try {
+        val file = liteRTModelManager.modelFile(model)
+        liteRTEngine.loadModel(file, modelId)
+        _onDeviceModelReady.value = true
+      } catch (e: Exception) {
+        Log.w("NodeRuntime", "Failed to load on-device model $modelId", e)
+        _onDeviceModelReady.value = false
+      } finally {
+        _onDeviceModelLoading.value = false
+      }
+    }
+  }
+
+  /** True when the user should chat locally instead of via the gateway. */
+  val useLocalInference: Boolean
+    get() = prefs.onDeviceModelEnabled.value && liteRTEngine.isReady
+
+  fun sendChatAdaptive(message: String, thinking: String, attachments: List<OutgoingAttachment>) {
+    if (useLocalInference && attachments.isEmpty()) {
+      localChat.sendMessage(message)
+    } else {
+      chat.sendMessage(message = message, thinkingLevel = thinking, attachments = attachments)
+    }
+  }
+
   private val voiceReplySpeakerLazy: Lazy<TalkModeManager> = lazy {
     // Reuse the existing TalkMode speech engine (ElevenLabs + deterministic system-TTS fallback)
     // without enabling the legacy talk capture loop.
@@ -547,6 +618,11 @@ class NodeRuntime(
   val chatSessions: StateFlow<List<ChatSessionEntry>> = chat.sessions
   val pendingRunCount: StateFlow<Int> = chat.pendingRunCount
 
+  val localChatMessages: StateFlow<List<ChatMessage>> = localChat.messages
+  val localChatError: StateFlow<String?> = localChat.errorText
+  val localChatStreamingText: StateFlow<String?> = localChat.streamingAssistantText
+  val localChatGenerating: StateFlow<Boolean> = localChat.isGenerating
+
   init {
     if (prefs.voiceWakeMode.value != VoiceWakeMode.Off) {
       prefs.setVoiceWakeMode(VoiceWakeMode.Off)
@@ -594,6 +670,10 @@ class NodeRuntime(
     }
 
     updateHomeCanvasState()
+
+    if (prefs.onDeviceModelEnabled.value) {
+      loadSelectedOnDeviceModel()
+    }
   }
 
   fun setForeground(value: Boolean) {
@@ -930,7 +1010,7 @@ class NodeRuntime(
   }
 
   fun sendChat(message: String, thinking: String, attachments: List<OutgoingAttachment>) {
-    chat.sendMessage(message = message, thinkingLevel = thinking, attachments = attachments)
+    sendChatAdaptive(message = message, thinking = thinking, attachments = attachments)
   }
 
   private fun handleGatewayEvent(event: String, payloadJson: String?) {

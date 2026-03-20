@@ -108,6 +108,14 @@ class SecurePrefs(
   private val _speakerEnabled = MutableStateFlow(plainPrefs.getBoolean("voice.speakerEnabled", true))
   val speakerEnabled: StateFlow<Boolean> = _speakerEnabled
 
+  private val _onDeviceModelEnabled =
+    MutableStateFlow(plainPrefs.getBoolean("litert.onDeviceEnabled", false))
+  val onDeviceModelEnabled: StateFlow<Boolean> = _onDeviceModelEnabled
+
+  private val _selectedOnDeviceModelId =
+    MutableStateFlow(plainPrefs.getString("litert.selectedModelId", "") ?: "")
+  val selectedOnDeviceModelId: StateFlow<String> = _selectedOnDeviceModelId
+
   fun setLastDiscoveredStableId(value: String) {
     val trimmed = value.trim()
     plainPrefs.edit { putString("gateway.lastDiscoveredStableID", trimmed) }
@@ -306,6 +314,17 @@ class SecurePrefs(
   fun setSpeakerEnabled(value: Boolean) {
     plainPrefs.edit { putBoolean("voice.speakerEnabled", value) }
     _speakerEnabled.value = value
+  }
+
+  fun setOnDeviceModelEnabled(value: Boolean) {
+    plainPrefs.edit { putBoolean("litert.onDeviceEnabled", value) }
+    _onDeviceModelEnabled.value = value
+  }
+
+  fun setSelectedOnDeviceModelId(value: String) {
+    val trimmed = value.trim()
+    plainPrefs.edit { putString("litert.selectedModelId", trimmed) }
+    _selectedOnDeviceModelId.value = trimmed
   }
 
   private fun loadVoiceWakeMode(): VoiceWakeMode {

@@ -8,6 +8,8 @@ import ai.openclaw.app.chat.ChatMessage
 import ai.openclaw.app.chat.ChatPendingToolCall
 import ai.openclaw.app.chat.ChatSessionEntry
 import ai.openclaw.app.chat.OutgoingAttachment
+import ai.openclaw.app.litert.LiteRTModelManager
+import ai.openclaw.app.litert.OnDeviceModelState
 import ai.openclaw.app.gateway.GatewayEndpoint
 import ai.openclaw.app.node.CameraCaptureManager
 import ai.openclaw.app.node.CanvasController
@@ -104,6 +106,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
   val chatPendingToolCalls: StateFlow<List<ChatPendingToolCall>> = runtimeState(initial = emptyList()) { it.chatPendingToolCalls }
   val chatSessions: StateFlow<List<ChatSessionEntry>> = runtimeState(initial = emptyList()) { it.chatSessions }
   val pendingRunCount: StateFlow<Int> = runtimeState(initial = 0) { it.pendingRunCount }
+
+  val onDeviceEnabled: StateFlow<Boolean> = runtimeState(initial = false) { it.onDeviceEnabled }
+  val selectedOnDeviceModelId: StateFlow<String> = runtimeState(initial = "") { it.selectedOnDeviceModelId }
+  val onDeviceModelLoading: StateFlow<Boolean> = runtimeState(initial = false) { it.onDeviceModelLoading }
+  val onDeviceModelReady: StateFlow<Boolean> = runtimeState(initial = false) { it.onDeviceModelReady }
+  val onDeviceModelStates: StateFlow<Map<String, OnDeviceModelState>> =
+    runtimeState(initial = emptyMap()) { it.liteRTModelManager.modelStates }
+
+  val localChatMessages: StateFlow<List<ChatMessage>> = runtimeState(initial = emptyList()) { it.localChatMessages }
+  val localChatError: StateFlow<String?> = runtimeState(initial = null) { it.localChatError }
+  val localChatStreamingText: StateFlow<String?> = runtimeState(initial = null) { it.localChatStreamingText }
+  val localChatGenerating: StateFlow<Boolean> = runtimeState(initial = false) { it.localChatGenerating }
 
   init {
     if (prefs.onboardingCompleted.value) {
@@ -271,5 +285,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
   fun sendChat(message: String, thinking: String, attachments: List<OutgoingAttachment>) {
     ensureRuntime().sendChat(message = message, thinking = thinking, attachments = attachments)
+  }
+
+  fun setOnDeviceModelEnabled(enabled: Boolean) {
+    ensureRuntime().setOnDeviceModelEnabled(enabled)
+  }
+
+  fun setSelectedOnDeviceModelId(modelId: String) {
+    ensureRuntime().setSelectedOnDeviceModelId(modelId)
+  }
+
+  val liteRTModelManager: LiteRTModelManager
+    get() = ensureRuntime().liteRTModelManager
+
+  fun abortLocalChat() {
+    runtimeRef.value?.localChat?.abort()
+  }
+
+  fun clearLocalChatHistory() {
+    runtimeRef.value?.localChat?.clearHistory()
   }
 }

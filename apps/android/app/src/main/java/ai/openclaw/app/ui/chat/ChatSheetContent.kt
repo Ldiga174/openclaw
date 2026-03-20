@@ -42,6 +42,8 @@ import ai.openclaw.app.ui.mobileCaption1
 import ai.openclaw.app.ui.mobileCaption2
 import ai.openclaw.app.ui.mobileDanger
 import ai.openclaw.app.ui.mobileDangerSoft
+import ai.openclaw.app.ui.mobileSuccess
+import ai.openclaw.app.ui.mobileSuccessSoft
 import ai.openclaw.app.ui.mobileText
 import ai.openclaw.app.ui.mobileTextSecondary
 import kotlinx.coroutines.Dispatchers
@@ -50,14 +52,33 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ChatSheetContent(viewModel: MainViewModel) {
-  val messages by viewModel.chatMessages.collectAsState()
-  val errorText by viewModel.chatError.collectAsState()
+  val onDeviceEnabled by viewModel.onDeviceEnabled.collectAsState()
+  val onDeviceReady by viewModel.onDeviceModelReady.collectAsState()
+  val isLocalMode = onDeviceEnabled && onDeviceReady
+
+  val gatewayMessages by viewModel.chatMessages.collectAsState()
+  val localMessages by viewModel.localChatMessages.collectAsState()
+  val messages = if (isLocalMode) localMessages else gatewayMessages
+
+  val gatewayError by viewModel.chatError.collectAsState()
+  val localError by viewModel.localChatError.collectAsState()
+  val errorText = if (isLocalMode) localError else gatewayError
+
   val pendingRunCount by viewModel.pendingRunCount.collectAsState()
+  val localGenerating by viewModel.localChatGenerating.collectAsState()
+  val effectivePendingCount = if (isLocalMode && localGenerating) 1 else if (isLocalMode) 0 else pendingRunCount
+
   val healthOk by viewModel.chatHealthOk.collectAsState()
+  val effectiveHealthOk = if (isLocalMode) true else healthOk
+
   val sessionKey by viewModel.chatSessionKey.collectAsState()
   val mainSessionKey by viewModel.mainSessionKey.collectAsState()
   val thinkingLevel by viewModel.chatThinkingLevel.collectAsState()
-  val streamingAssistantText by viewModel.chatStreamingAssistantText.collectAsState()
+
+  val gatewayStreaming by viewModel.chatStreamingAssistantText.collectAsState()
+  val localStreaming by viewModel.localChatStreamingText.collectAsState()
+  val streamingAssistantText = if (isLocalMode) localStreaming else gatewayStreaming
+
   val pendingToolCalls by viewModel.chatPendingToolCalls.collectAsState()
   val sessions by viewModel.chatSessions.collectAsState()
 
@@ -96,12 +117,16 @@ fun ChatSheetContent(viewModel: MainViewModel) {
         .padding(horizontal = 20.dp, vertical = 12.dp),
     verticalArrangement = Arrangement.spacedBy(8.dp),
   ) {
-    ChatThreadSelector(
-      sessionKey = sessionKey,
-      sessions = sessions,
-      mainSessionKey = mainSessionKey,
-      onSelectSession = { key -> viewModel.switchChatSession(key) },
-    )
+    if (isLocalMode) {
+      LocalModeIndicator()
+    } else {
+      ChatThreadSelector(
+        sessionKey = sessionKey,
+        sessions = sessions,
+        mainSessionKey = mainSessionKey,
+        onSelectSession = { key -> viewModel.switchChatSession(key) },
+      )
+    }
 
     if (!errorText.isNullOrBlank()) {
       ChatErrorRail(errorText = errorText!!)
@@ -109,27 +134,37 @@ fun ChatSheetContent(viewModel: MainViewModel) {
 
     ChatMessageListCard(
       messages = messages,
-      pendingRunCount = pendingRunCount,
-      pendingToolCalls = pendingToolCalls,
+      pendingRunCount = effectivePendingCount,
+      pendingToolCalls = if (isLocalMode) emptyList() else pendingToolCalls,
       streamingAssistantText = streamingAssistantText,
-      healthOk = healthOk,
+      healthOk = effectiveHealthOk,
       modifier = Modifier.weight(1f, fill = true),
     )
 
     Row(modifier = Modifier.fillMaxWidth().imePadding()) {
       ChatComposer(
-        healthOk = healthOk,
+        healthOk = effectiveHealthOk,
         thinkingLevel = thinkingLevel,
-        pendingRunCount = pendingRunCount,
+        pendingRunCount = effectivePendingCount,
         attachments = attachments,
         onPickImages = { pickImages.launch("image/*") },
         onRemoveAttachment = { id -> attachments.removeAll { it.id == id } },
         onSetThinkingLevel = { level -> viewModel.setChatThinkingLevel(level) },
         onRefresh = {
-          viewModel.refreshChat()
-          viewModel.refreshChatSessions(limit = 200)
+          if (isLocalMode) {
+            viewModel.clearLocalChatHistory()
+          } else {
+            viewModel.refreshChat()
+            viewModel.refreshChatSessions(limit = 200)
+          }
         },
-        onAbort = { viewModel.abortChat() },
+        onAbort = {
+          if (isLocalMode) {
+            viewModel.abortLocalChat()
+          } else {
+            viewModel.abortChat()
+          }
+        },
         onSend = { text ->
           val outgoing =
             attachments.map { att ->
@@ -145,6 +180,23 @@ fun ChatSheetContent(viewModel: MainViewModel) {
         },
       )
     }
+  }
+}
+
+@Composable
+private fun LocalModeIndicator() {
+  Surface(
+    modifier = Modifier.fillMaxWidth(),
+    color = mobileSuccessSoft,
+    shape = RoundedCornerShape(12.dp),
+    border = BorderStroke(1.dp, mobileSuccess),
+  ) {
+    Text(
+      text = "On-Device · Running locally",
+      style = mobileCaption1.copy(fontWeight = FontWeight.Bold),
+      color = mobileSuccess,
+      modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+    )
   }
 }
 
