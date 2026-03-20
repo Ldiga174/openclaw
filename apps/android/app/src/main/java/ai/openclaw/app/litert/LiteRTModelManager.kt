@@ -87,7 +87,7 @@ class LiteRTModelManager(context: Context) {
         }
 
         connection.inputStream.use { input ->
-          tempFile.outputStream(append).use { output ->
+          java.io.FileOutputStream(tempFile, append).use { output ->
             val buffer = ByteArray(BUFFER_SIZE)
             var bytesRead: Int
             var downloaded = if (append) tempFile.length() else 0L

@@ -13,6 +13,7 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -81,7 +82,7 @@ class LiteRTEngineWrapper(private val context: Context) {
   fun sendMessageStreaming(message: String): Flow<String> {
     val conversation =
       conversationRef.get() ?: throw IllegalStateException("No model loaded")
-    return conversation.sendMessageAsync(message)
+    return conversation.sendMessageAsync(message).map { it.toString() }
   }
 
   /** Send a message and wait for the complete response. */
