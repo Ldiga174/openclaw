@@ -29,20 +29,20 @@ first gateway run).
 
 ## 2. Key commands cheat sheet
 
-| Task | Command |
-|------|---------|
-| Install deps | `pnpm install` |
-| Lint + format + typecheck | `pnpm check` |
-| Format fix | `pnpm format:fix` |
-| Build (TypeScript) | `pnpm build` |
-| Build (control UI) | `pnpm ui:build` |
-| Unit tests (Cloud VM) | `OPENCLAW_TEST_PROFILE=low OPENCLAW_TEST_SERIAL_GATEWAY=1 pnpm test` |
-| Scoped test | `pnpm test -- path/to/file.test.ts` |
-| Scoped test with filter | `pnpm test -- path/to/file.test.ts -t "test name pattern"` |
+| Task                       | Command                                                                                         |
+| -------------------------- | ----------------------------------------------------------------------------------------------- |
+| Install deps               | `pnpm install`                                                                                  |
+| Lint + format + typecheck  | `pnpm check`                                                                                    |
+| Format fix                 | `pnpm format:fix`                                                                               |
+| Build (TypeScript)         | `pnpm build`                                                                                    |
+| Build (control UI)         | `pnpm ui:build`                                                                                 |
+| Unit tests (Cloud VM)      | `OPENCLAW_TEST_PROFILE=low OPENCLAW_TEST_SERIAL_GATEWAY=1 pnpm test`                            |
+| Scoped test                | `pnpm test -- path/to/file.test.ts`                                                             |
+| Scoped test with filter    | `pnpm test -- path/to/file.test.ts -t "test name pattern"`                                      |
 | Gateway (dev, no channels) | `OPENCLAW_SKIP_CHANNELS=1 pnpm openclaw gateway run --dev --bind loopback --port 18789 --force` |
-| Health check | `curl http://127.0.0.1:18789/health` |
-| CLI in dev | `pnpm openclaw <command>` |
-| Commit (scoped) | `scripts/committer "message" file1 file2` |
+| Health check               | `curl http://127.0.0.1:18789/health`                                                            |
+| CLI in dev                 | `pnpm openclaw <command>`                                                                       |
+| Commit (scoped)            | `scripts/committer "message" file1 file2`                                                       |
 
 ## 3. Running the dev gateway
 
@@ -61,12 +61,12 @@ curl http://127.0.0.1:18789/health
 
 Additional skip flags (useful for isolated testing):
 
-| Flag | Skips |
-|------|-------|
-| `OPENCLAW_SKIP_CHANNELS=1` | All messaging channels |
-| `OPENCLAW_SKIP_GMAIL_WATCHER=1` | Gmail hook |
-| `OPENCLAW_SKIP_CRON=1` | Scheduled jobs |
-| `OPENCLAW_SKIP_CANVAS_HOST=1` | Canvas host sidecar |
+| Flag                                     | Skips                  |
+| ---------------------------------------- | ---------------------- |
+| `OPENCLAW_SKIP_CHANNELS=1`               | All messaging channels |
+| `OPENCLAW_SKIP_GMAIL_WATCHER=1`          | Gmail hook             |
+| `OPENCLAW_SKIP_CRON=1`                   | Scheduled jobs         |
+| `OPENCLAW_SKIP_CANVAS_HOST=1`            | Canvas host sidecar    |
 | `OPENCLAW_SKIP_BROWSER_CONTROL_SERVER=1` | Browser control server |
 
 Combine as needed — for a minimal gateway, set all five.
@@ -170,7 +170,6 @@ OpenClaw does not use a feature-flag service. Behavior is controlled via:
 
 2. **Environment variables** (`OPENCLAW_*`): see `.env.example` at the repo
    root for the full list. Key ones for dev:
-
    - `OPENCLAW_STATE_DIR` — override state directory
    - `OPENCLAW_CONFIG_PATH` — override config path
    - `OPENCLAW_GATEWAY_TOKEN` — auth token (required when binding beyond loopback)
@@ -275,6 +274,7 @@ that would save future Cloud agents time:
 4. Commit with: `scripts/committer "skill: update cloud-agent-starter" .agents/skills/cloud-agent-starter/SKILL.md`
 
 Examples of good additions:
+
 - A new `OPENCLAW_*` env var that simplifies a common test scenario.
 - A workaround for a flaky test or environment issue specific to Cloud VMs.
 - A new `pnpm test:*` script and when to use it.
