@@ -63,7 +63,7 @@ class LiteRTEngineWrapper(private val context: Context) {
             systemInstruction =
               systemInstruction?.let { Contents.of(it) }
                 ?: Contents.of("You are a helpful, concise assistant running on this device."),
-            samplerConfig = SamplerConfig(topK = 40, topP = 0.95f, temperature = 0.7f),
+            samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.7),
           )
         val conversation = engine.createConversation(conversationConfig)
 
@@ -104,7 +104,7 @@ class LiteRTEngineWrapper(private val context: Context) {
           systemInstruction =
             systemInstruction?.let { Contents.of(it) }
               ?: Contents.of("You are a helpful, concise assistant running on this device."),
-          samplerConfig = SamplerConfig(topK = 40, topP = 0.95f, temperature = 0.7f),
+          samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.7),
         )
       conversationRef.set(engine.createConversation(conversationConfig))
     }
