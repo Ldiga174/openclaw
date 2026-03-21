@@ -206,3 +206,29 @@
 - For manual `openclaw message send` messages that include `!`, use the heredoc pattern noted below to avoid the Bash tool’s escaping.
 - Release guardrails: do not change version numbers without operator’s explicit consent; always ask permission before running any npm publish/release step.
 - Beta release guardrail: when using a beta Git tag (for example `vYYYY.M.D-beta.N`), publish npm with a matching beta version suffix (for example `YYYY.M.D-beta.N`) rather than a plain version on `--tag beta`; otherwise the plain version name gets consumed/blocked.
+
+## Cursor Cloud specific instructions
+
+### Environment
+
+- Node 22+ and pnpm 10.23.0 are available via nvm (pre-installed). Bun is installed at `~/.bun/bin/bun`; ensure `PATH` includes `$HOME/.bun/bin`.
+- The VM has no external databases or services — the project is fully self-contained (embedded SQLite, file-based stores under `~/.openclaw/`).
+
+### Standard commands
+
+Refer to the "Build, Test, and Development Commands" section above. Key commands:
+
+- **Install deps:** `pnpm install`
+- **Lint/format/typecheck:** `pnpm check`
+- **Tests:** `OPENCLAW_TEST_PROFILE=low OPENCLAW_TEST_SERIAL_GATEWAY=1 pnpm test` (use low-memory profile in cloud VMs)
+- **Build:** `pnpm build` then `pnpm ui:build`
+- **Dev gateway:** `OPENCLAW_SKIP_CHANNELS=1 pnpm openclaw gateway run --dev --bind loopback --port 18789 --force`
+- **CLI in dev:** `pnpm openclaw <command>`
+
+### Gotchas
+
+- The gateway exits immediately from `pnpm gateway:dev` because it only generates config on first run. Use `pnpm openclaw gateway run --dev --bind loopback --port 18789 --force` to keep it running.
+- `pnpm install` may warn about ignored build scripts (`@discordjs/opus`, `@tloncorp/tlon-skill`). This is expected per `pnpm.onlyBuiltDependencies` allowlist — do not run `pnpm approve-builds` (interactive).
+- The `prepare` script sets `git config core.hooksPath git-hooks`; this runs automatically during `pnpm install`.
+- No API keys or channel tokens are needed for unit tests or dev gateway startup with `OPENCLAW_SKIP_CHANNELS=1`. Live/E2E tests require real keys.
+- Health check endpoint: `curl http://127.0.0.1:18789/health` returns `{"ok":true,"status":"live"}` when the gateway is running.
